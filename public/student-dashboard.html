@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الطالب - نظام إدارة المدرسة</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/rtl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    .student-header {
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      color: white;
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      margin-bottom: 2rem;
+    }
+    
+    .student-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      margin-left: 1rem;
+    }
+    
+    .student-info h2 {
+      margin-bottom: 0.25rem;
+    }
+    
+    .student-info p {
+      margin-bottom: 0.25rem;
+      opacity: 0.9;
+    }
+    
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-item {
+      background-color: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    .stat-label {
+      color: var(--gray-color);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a class="navbar-brand" href="#">
+        <i class="fas fa-graduation-cap"></i>
+        نظام إدارة المدرسة
+      </a>
+      <div class="navbar-nav">
+        <a class="nav-link active" href="#" onclick="showStudentTab('dashboard')">الرئيسية</a>
+        <a class="nav-link" href="#" onclick="showStudentTab('classes')">حصصي</a>
+        <a class="nav-link" href="#" onclick="showStudentTab('payments')">مدفوعاتي</a>
+        <a class="nav-link" href="#" onclick="showStudentTab('attendance')">حضوري</a>
+        <a class="nav-link" href="#" onclick="showStudentTab('profile')">الملف الشخصي</a>
+        <a class="nav-link" href="#" id="logout-btn">تسجيل الخروج</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Student Header -->
+    <div class="student-header">
+      <div class="d-flex align-items-center">
+        <div class="student-avatar" id="student-avatar">ط</div>
+        <div class="student-info">
+          <h2 id="student-name">...</h2>
+          <p id="student-id">رقم الطالب: ...</p>
+          <p id="student-academic-year">السنة الدراسية: ...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div class="tab-content active" id="student-dashboard-tab">
+      <div class="quick-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="total-classes-count">0</div>
+          <div class="stat-label">عدد الحصص</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="paid-amount">0</div>
+          <div class="stat-label">المدفوع</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="pending-amount">0</div>
+          <div class="stat-label">المتبقي</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="attendance-rate">0%</div>
+          <div class="stat-label">نسبة الحضور</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">الحصص القادمة</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table" id="upcoming-classes-table">
+                <thead>
+                  <tr>
+                    <th>الحصة</th>
+                    <th>اليوم</th>
+                    <th>الوقت</th>
+                    <th>الأستاذ</th>
+                  </tr>
+                </thead>
+                <tbody id="upcoming-classes-list">
+                  <tr>
+                    <td colspan="4" class="text-center">جاري التحميل...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">آخر المدفوعات</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table" id="recent-payments-table">
+                <thead>
+                  <tr>
+                    <th>الحصة</th>
+                    <th>المبلغ</th>
+                    <th>الشهر</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-payments-list">
+                  <tr>
+                    <td colspan="4" class="text-center">جاري التحميل...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classes Tab -->
+    <div class="tab-content" id="student-classes-tab">
+      <h2 class="page-title">حصصي</h2>
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="my-classes-table">
+              <thead>
+                <tr>
+                  <th>اسم الحصة</th>
+                  <th>المادة</th>
+                  <th>الأستاذ</th>
+                  <th>الجدول</th>
+                  <th>السعر</th>
+                </tr>
+              </thead>
+              <tbody id="my-classes-list">
+                <tr>
+                  <td colspan="5" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payments Tab -->
+    <div class="tab-content" id="student-payments-tab">
+      <h2 class="page-title">مدفوعاتي</h2>
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="my-payments-table">
+              <thead>
+                <tr>
+                  <th>الحصة</th>
+                  <th>المبلغ</th>
+                  <th>الشهر</th>
+                  <th>تاريخ الدفع</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="my-payments-list">
+                <tr>
+                  <td colspan="5" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Tab -->
+    <div class="tab-content" id="student-attendance-tab">
+      <h2 class="page-title">سجل الحضور</h2>
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="my-attendance-table">
+              <thead>
+                <tr>
+                  <th>الحصة</th>
+                  <th>التاريخ</th>
+                  <th>الوقت</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="my-attendance-list">
+                <tr>
+                  <td colspan="4" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="tab-content" id="student-profile-tab">
+      <h2 class="page-title">الملف الشخصي</h2>
+      <div class="card">
+        <div class="card-body">
+          <form id="profile-form">
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">الاسم الكامل</label>
+                  <input type="text" class="form-control" id="profile-name" readonly>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">رقم الطالب</label>
+                  <input type="text" class="form-control" id="profile-student-id" readonly>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">السنة الدراسية</label>
+                  <input type="text" class="form-control" id="profile-academic-year" readonly>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">اسم ولي الأمر</label>
+                  <input type="text" class="form-control" id="profile-parent-name" readonly>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">رقم هاتف ولي الأمر</label>
+                  <input type="tel" class="form-control" id="profile-parent-phone" readonly>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">البريد الإلكتروني</label>
+                  <input type="email" class="form-control" id="profile-email" readonly>
+                </div>
+              </div>
+            </div>
+          </form>
+          
+          <hr>
+          
+          <h5>تغيير كلمة المرور</h5>
+          <form id="change-password-form" onsubmit="changePassword(event)">
+            <div class="form-group">
+              <label class="form-label">كلمة المرور الحالية</label>
+              <input type="password" class="form-control" id="current-password" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">كلمة المرور الجديدة</label>
+              <input type="password" class="form-control" id="new-password" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+              <input type="password" class="form-control" id="confirm-password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">تغيير كلمة المرور</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script>
+    let studentData = null;
+
+    function showStudentTab(tabName) {
+      // Update nav links
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+      });
+      
+      const activeLink = Array.from(document.querySelectorAll('.nav-link')).find(link => 
+        link.textContent.includes(tabName === 'dashboard' ? 'الرئيسية' :
+                                tabName === 'classes' ? 'حصصي' :
+                                tabName === 'payments' ? 'مدفوعاتي' :
+                                tabName === 'attendance' ? 'حضوري' :
+                                tabName === 'profile' ? 'الشخصي' : '')
+      );
+      
+      if (activeLink) {
+        activeLink.classList.add('active');
+      }
+
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      const activeTab = document.getElementById(`student-${tabName}-tab`);
+      if (activeTab) {
+        activeTab.classList.add('active');
+      }
+    }
+
+    async function loadStudentData() {
+      try {
+        studentData = await apiRequest('/api/student/data');
+        
+        if (!studentData || !studentData.student) {
+          showToast('فشل تحميل بيانات الطالب', 'danger');
+          return;
+        }
+
+        // Update header
+        document.getElementById('student-name').textContent = studentData.student.name;
+        document.getElementById('student-id').textContent = `رقم الطالب: ${studentData.student.studentId}`;
+        document.getElementById('student-academic-year').textContent = `السنة الدراسية: ${studentData.student.academicYear}`;
+        
+        const avatar = document.getElementById('student-avatar');
+        avatar.textContent = studentData.student.name.charAt(0);
+
+        // Update stats
+        const classes = studentData.upcomingClasses || [];
+        const payments = studentData.payments || [];
+        
+        const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+        const pendingAmount = payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+        
+        document.getElementById('total-classes-count').textContent = classes.length;
+        document.getElementById('paid-amount').textContent = formatCurrency(paidAmount);
+        document.getElementById('pending-amount').textContent = formatCurrency(pendingAmount);
+
+        // Update upcoming classes
+        const upcomingList = document.getElementById('upcoming-classes-list');
+        if (classes.length) {
+          upcomingList.innerHTML = classes.slice(0, 5).map(cls => `
+            <tr>
+              <td>${cls.className}</td>
+              <td>${cls.day}</td>
+              <td>${cls.time}</td>
+              <td>${cls.teacher}</td>
+            </tr>
+          `).join('');
+        } else {
+          upcomingList.innerHTML = '<tr><td colspan="4" class="text-center">لا توجد حصص قادمة</td></tr>';
+        }
+
+        // Update recent payments
+        const recentList = document.getElementById('recent-payments-list');
+        if (payments.length) {
+          recentList.innerHTML = payments.slice(0, 5).map(p => `
+            <tr>
+              <td>${p.class?.name || '-'}</td>
+              <td>${formatCurrency(p.amount)}</td>
+              <td>${p.month || '-'}</td>
+              <td>${getStatusBadge(p.status)}</td>
+            </tr>
+          `).join('');
+        } else {
+          recentList.innerHTML = '<tr><td colspan="4" class="text-center">لا توجد مدفوعات</td></tr>';
+        }
+
+        // Update my classes tab
+        const myClassesList = document.getElementById('my-classes-list');
+        if (classes.length) {
+          myClassesList.innerHTML = classes.map(cls => `
+            <tr>
+              <td>${cls.className}</td>
+              <td>${cls.subject}</td>
+              <td>${cls.teacher}</td>
+              <td>${cls.day} ${cls.time}</td>
+              <td>${formatCurrency(cls.price)}</td>
+            </tr>
+          `).join('');
+        } else {
+          myClassesList.innerHTML = '<tr><td colspan="5" class="text-center">غير مسجل في أي حصة</td></tr>';
+        }
+
+        // Update payments tab
+        const myPaymentsList = document.getElementById('my-payments-list');
+        if (payments.length) {
+          myPaymentsList.innerHTML = payments.map(p => `
+            <tr>
+              <td>${p.class?.name || '-'}</td>
+              <td>${formatCurrency(p.amount)}</td>
+              <td>${p.month || '-'}</td>
+              <td>${p.paymentDate ? formatDate(p.paymentDate) : '-'}</td>
+              <td>${getStatusBadge(p.status)}</td>
+            </tr>
+          `).join('');
+        } else {
+          myPaymentsList.innerHTML = '<tr><td colspan="5" class="text-center">لا توجد مدفوعات</td></tr>';
+        }
+
+        // Update profile
+        document.getElementById('profile-name').value = studentData.student.name;
+        document.getElementById('profile-student-id').value = studentData.student.studentId;
+        document.getElementById('profile-academic-year').value = studentData.student.academicYear;
+        document.getElementById('profile-parent-name').value = studentData.student.parentName;
+        document.getElementById('profile-parent-phone').value = studentData.student.parentPhone;
+        document.getElementById('profile-email').value = studentData.student.parentEmail || '';
+
+        // Load attendance
+        loadAttendance();
+
+      } catch (error) {
+        console.error('Error loading student data:', error);
+        showToast('فشل تحميل بيانات الطالب', 'danger');
+      }
+    }
+
+    async function loadAttendance() {
+      try {
+        const now = new Date();
+        const attendance = await apiRequest(`/api/students/${studentData.student._id}/monthly-attendance?month=${now.getMonth() + 1}&year=${now.getFullYear()}`);
+        
+        if (attendance) {
+          const attendanceRate = attendance.summary?.attendanceRate || 0;
+          document.getElementById('attendance-rate').textContent = attendanceRate + '%';
+
+          // Load attendance list
+          const attendanceList = document.getElementById('my-attendance-list');
+          const records = [];
+          
+          Object.values(attendance.attendanceByClass || {}).forEach(cls => {
+            cls.attendance.forEach(att => {
+              records.push({
+                className: cls.class.name,
+                date: att.date,
+                status: att.status
+              });
+            });
+          });
+
+          records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          if (records.length) {
+            attendanceList.innerHTML = records.map(att => `
+              <tr>
+                <td>${att.className}</td>
+                <td>${formatDate(att.date)}</td>
+                <td>${new Date(att.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
+                <td>${getStatusBadge(att.status)}</td>
+              </tr>
+            `).join('');
+          } else {
+            attendanceList.innerHTML = '<tr><td colspan="4" class="text-center">لا توجد سجلات حضور</td></tr>';
+          }
+        }
+      } catch (error) {
+        console.error('Error loading attendance:', error);
+      }
+    }
+
+    async function changePassword(event) {
+      event.preventDefault();
+
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast('يرجى ملء جميع الحقول', 'warning');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast('كلمة المرور الجديدة غير متطابقة', 'warning');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'warning');
+        return;
+      }
+
+      try {
+        await apiRequest('/api/student/change-password', 'POST', {
+          currentPassword,
+          newPassword
+        });
+
+        showToast('تم تغيير كلمة المرور بنجاح', 'success');
+        document.getElementById('change-password-form').reset();
+      } catch (error) {
+        console.error('Error changing password:', error);
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      if (checkAuth('student')) {
+        loadStudentData();
+      }
+    });
+  </script>
+</body>
+</html>

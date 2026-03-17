@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - نظام إدارة المدرسة</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/rtl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-container {
+      max-width: 400px;
+      width: 100%;
+      padding: 20px;
+    }
+    .login-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      padding: 2rem;
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .login-header h1 {
+      color: #2563eb;
+      font-size: 1.875rem;
+    }
+    .login-logo {
+      font-size: 3rem;
+      color: #2563eb;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-logo">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <h1>تسجيل الدخول</h1>
+        <p>أدخل بيانات الدخول للوصول إلى النظام</p>
+      </div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">اسم المستخدم</label>
+          <input type="text" class="form-control" id="username" required>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">كلمة المرور</label>
+          <input type="password" class="form-control" id="password" required>
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-sign-in-alt"></i>
+            تسجيل الدخول
+          </button>
+        </div>
+      </form>
+      
+      <div class="text-center mt-3">
+        <a href="/forgot-password">نسيت كلمة المرور؟</a>
+      </div>
+      
+      <div class="text-center mt-3">
+        <a href="/">العودة للرئيسية</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          localStorage.setItem('authToken', data.token);
+          localStorage.setItem('currentUser', JSON.stringify(data.user));
+          
+          // Redirect based on role
+          if (data.user.role === 'admin') {
+            window.location.href = '/admin';
+          } else if (data.user.role === 'teacher') {
+            window.location.href = '/teacher';
+          } else if (data.user.role === 'accountant') {
+            window.location.href = '/accounting';
+          } else {
+            window.location.href = '/dashboard';
+          }
+        } else {
+          alert(data.error || 'فشل تسجيل الدخول');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('حدث خطأ في الاتصال');
+      }
+    });
+  </script>
+</body>
+</html>

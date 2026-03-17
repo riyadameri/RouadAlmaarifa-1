@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - نظام إدارة المدرسة</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/rtl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    /* Admin specific styles */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 260px;
+      background-color: var(--dark-color);
+      color: white;
+      padding: 2rem 1rem;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    
+    .main-content {
+      margin-right: 260px;
+      padding: 2rem;
+      transition: margin-right 0.3s ease;
+    }
+    
+    .sidebar-logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar-nav {
+      list-style: none;
+    }
+    
+    .sidebar-item {
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      color: rgba(255, 255, 255, 0.8);
+      border-radius: var(--radius-sm);
+      transition: all 0.3s ease;
+    }
+    
+    .sidebar-link:hover,
+    .sidebar-link.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .sidebar-link i {
+      margin-left: 0.75rem;
+      width: 20px;
+      text-align: center;
+    }
+    
+    .top-bar {
+      background-color: var(--card-bg);
+      padding: 1rem 2rem;
+      margin-bottom: 2rem;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    
+    .page-title {
+      margin-bottom: 2rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .quick-actions {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background-color: var(--card-bg);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+    
+    .action-btn:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    
+    .action-btn i {
+      font-size: 1.25rem;
+      color: var(--primary-color);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(100%);
+      }
+      
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <i class="fas fa-graduation-cap"></i>
+      نظام إدارة المدرسة
+    </div>
+    <ul class="sidebar-nav">
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link active" data-tab="dashboard">
+          <i class="fas fa-home"></i>
+          الرئيسية
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="students">
+          <i class="fas fa-users"></i>
+          الطلاب
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="teachers">
+          <i class="fas fa-chalkboard-teacher"></i>
+          الأساتذة
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="classes">
+          <i class="fas fa-book"></i>
+          الحصص
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="payments">
+          <i class="fas fa-money-bill-wave"></i>
+          المدفوعات
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="attendance">
+          <i class="fas fa-calendar-check"></i>
+          الحضور والغياب
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="cards">
+          <i class="fas fa-id-card"></i>
+          بطاقات RFID
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="reports">
+          <i class="fas fa-chart-bar"></i>
+          التقارير
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" data-tab="settings">
+          <i class="fas fa-cog"></i>
+          الإعدادات
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="#" class="sidebar-link" id="logout-btn">
+          <i class="fas fa-sign-out-alt"></i>
+          تسجيل الخروج
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="main-content">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <button class="btn btn-sm btn-outline" id="sidebar-toggle" style="display: none;">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="user-menu">
+        <span id="user-name">مرحباً، Admin</span>
+        <div class="user-avatar" id="user-avatar">A</div>
+      </div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div class="tab-content active" id="dashboard-tab">
+      <h1 class="page-title">لوحة التحكم الرئيسية</h1>
+      
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="stats-container">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-students">0</div>
+            <div class="stat-label">إجمالي الطلاب</div>
+          </div>
+        </div>
+        
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+          <div class="stat-icon">
+            <i class="fas fa-chalkboard-teacher"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-teachers">0</div>
+            <div class="stat-label">إجمالي الأساتذة</div>
+          </div>
+        </div>
+        
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+          <div class="stat-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-classes">0</div>
+            <div class="stat-label">إجمالي الحصص</div>
+          </div>
+        </div>
+        
+        <div class="stat-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+          <div class="stat-icon">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value" id="pending-payments">0</div>
+            <div class="stat-label">مدفوعات معلقة</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <a href="#" class="action-btn" onclick="showTab('students')">
+          <i class="fas fa-user-plus"></i>
+          إضافة طالب جديد
+        </a>
+        <a href="#" class="action-btn" onclick="showTab('teachers')">
+          <i class="fas fa-user-tie"></i>
+          إضافة أستاذ جديد
+        </a>
+        <a href="#" class="action-btn" onclick="showTab('classes')">
+          <i class="fas fa-plus-circle"></i>
+          إنشاء حصة جديدة
+        </a>
+        <a href="#" class="action-btn" onclick="showTab('payments')">
+          <i class="fas fa-hand-holding-usd"></i>
+          تسجيل دفعة
+        </a>
+      </div>
+
+      <!-- Recent Activities -->
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">أحدث الطلاب المسجلين</h3>
+            <a href="#" onclick="showTab('students')">عرض الكل</a>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table" id="recent-students-table">
+                <thead>
+                  <tr>
+                    <th>الاسم</th>
+                    <th>رقم الطالب</th>
+                    <th>تاريخ التسجيل</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-students">
+                  <tr>
+                    <td colspan="4" class="text-center">جاري التحميل...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">أحدث المدفوعات</h3>
+            <a href="#" onclick="showTab('payments')">عرض الكل</a>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table" id="recent-payments-table">
+                <thead>
+                  <tr>
+                    <th>الطالب</th>
+                    <th>المبلغ</th>
+                    <th>الشهر</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-payments">
+                  <tr>
+                    <td colspan="4" class="text-center">جاري التحميل...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Classes -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">حصص اليوم</h3>
+          <a href="#" onclick="showTab('classes')">عرض الكل</a>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="today-classes-table">
+              <thead>
+                <tr>
+                  <th>اسم الحصة</th>
+                  <th>المادة</th>
+                  <th>الأستاذ</th>
+                  <th>الوقت</th>
+                  <th>القاعة</th>
+                  <th>عدد الطلاب</th>
+                </tr>
+              </thead>
+              <tbody id="today-classes">
+                <tr>
+                  <td colspan="6" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students Tab -->
+    <div class="tab-content" id="students-tab">
+      <div class="section-header">
+        <h2 class="page-title">إدارة الطلاب</h2>
+        <button class="btn btn-primary" onclick="openAddStudentModal()">
+          <i class="fas fa-plus"></i>
+          إضافة طالب جديد
+        </button>
+      </div>
+
+      <!-- Search and Filter -->
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <input type="text" class="form-control" id="student-search" placeholder="بحث عن طالب...">
+            </div>
+            <div class="col">
+              <select class="form-select" id="student-filter">
+                <option value="">جميع الطلاب</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+                <option value="pending">قيد الانتظار</option>
+              </select>
+            </div>
+            <div class="col">
+              <button class="btn btn-primary" onclick="searchStudents()">
+                <i class="fas fa-search"></i>
+                بحث
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Students Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="students-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>رقم الطالب</th>
+                  <th>الاسم</th>
+                  <th>السنة الدراسية</th>
+                  <th>ولي الأمر</th>
+                  <th>رقم الهاتف</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="students-list">
+                <tr>
+                  <td colspan="8" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="students-pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teachers Tab -->
+    <div class="tab-content" id="teachers-tab">
+      <div class="section-header">
+        <h2 class="page-title">إدارة الأساتذة</h2>
+        <button class="btn btn-primary" onclick="openAddTeacherModal()">
+          <i class="fas fa-plus"></i>
+          إضافة أستاذ جديد
+        </button>
+      </div>
+
+      <!-- Teachers Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="teachers-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الاسم</th>
+                  <th>المواد</th>
+                  <th>رقم الهاتف</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>نسبة العمولة</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="teachers-list">
+                <tr>
+                  <td colspan="8" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classes Tab -->
+    <div class="tab-content" id="classes-tab">
+      <div class="section-header">
+        <h2 class="page-title">إدارة الحصص</h2>
+        <button class="btn btn-primary" onclick="openAddClassModal()">
+          <i class="fas fa-plus"></i>
+          إنشاء حصة جديدة
+        </button>
+      </div>
+
+      <!-- Classes Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="classes-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>اسم الحصة</th>
+                  <th>المادة</th>
+                  <th>السنة الدراسية</th>
+                  <th>الأستاذ</th>
+                  <th>السعر</th>
+                  <th>نظام الدفع</th>
+                  <th>عدد الطلاب</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="classes-list">
+                <tr>
+                  <td colspan="9" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payments Tab -->
+    <div class="tab-content" id="payments-tab">
+      <div class="section-header">
+        <h2 class="page-title">إدارة المدفوعات</h2>
+        <button class="btn btn-primary" onclick="openAddPaymentModal()">
+          <i class="fas fa-plus"></i>
+          تسجيل دفعة جديدة
+        </button>
+      </div>
+
+      <!-- Payments Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="payments-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الطالب</th>
+                  <th>الحصة</th>
+                  <th>المبلغ</th>
+                  <th>الشهر</th>
+                  <th>تاريخ الدفع</th>
+                  <th>طريقة الدفع</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="payments-list">
+                <tr>
+                  <td colspan="9" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Tab -->
+    <div class="tab-content" id="attendance-tab">
+      <div class="section-header">
+        <h2 class="page-title">الحضور والغياب</h2>
+        <button class="btn btn-primary" onclick="openScheduleClassModal()">
+          <i class="fas fa-plus"></i>
+          جدولة حصة
+        </button>
+      </div>
+
+      <!-- Today's Live Classes -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">الحصص الحية اليوم</h3>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="live-classes-table">
+              <thead>
+                <tr>
+                  <th>الحصة</th>
+                  <th>الأستاذ</th>
+                  <th>الوقت</th>
+                  <th>القاعة</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="live-classes-list">
+                <tr>
+                  <td colspan="6" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Tab -->
+    <div class="tab-content" id="cards-tab">
+      <div class="section-header">
+        <h2 class="page-title">إدارة بطاقات RFID</h2>
+        <button class="btn btn-primary" onclick="openAddCardModal()">
+          <i class="fas fa-plus"></i>
+          إضافة بطاقة جديدة
+        </button>
+      </div>
+
+      <!-- Cards Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="cards-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>UID البطاقة</th>
+                  <th>الطالب</th>
+                  <th>تاريخ الإصدار</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="cards-list">
+                <tr>
+                  <td colspan="5" class="text-center">جاري التحميل...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div class="tab-content" id="reports-tab">
+      <h2 class="page-title">التقارير</h2>
+      
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">تقرير الدخل اليومي</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="daily-income-chart" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">تقرير المصروفات</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="expenses-chart" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">حضور الطلاب</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="attendance-chart" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">توزيع المدفوعات</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="payments-chart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settings-tab">
+      <h2 class="page-title">الإعدادات</h2>
+      
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">إعدادات النظام</h3>
+        </div>
+        <div class="card-body">
+          <form id="settings-form">
+            <div class="form-group">
+              <label class="form-label">اسم المؤسسة</label>
+              <input type="text" class="form-control" id="school-name" value="مدرسة النجاح">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني</label>
+              <input type="email" class="form-control" id="school-email" value="info@school.com">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">رقم الهاتف</label>
+              <input type="text" class="form-control" id="school-phone" value="+213 123 456 789">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">العنوان</label>
+              <input type="text" class="form-control" id="school-address" value="الجزائر">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Student Modal -->
+  <div class="modal" id="add-student-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">إضافة طالب جديد</h5>
+          <button class="modal-close" onclick="closeModal('add-student-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-student-form">
+            <div class="form-group">
+              <label class="form-label">الاسم الكامل</label>
+              <input type="text" class="form-control" id="student-name" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">السنة الدراسية</label>
+              <select class="form-select" id="student-academic-year" required>
+                <option value="">اختر السنة</option>
+                <option value="1AS">1AS</option>
+                <option value="2AS">2AS</option>
+                <option value="3AS">3AS</option>
+                <option value="1MS">1MS</option>
+                <option value="2MS">2MS</option>
+                <option value="3MS">3MS</option>
+                <option value="4MS">4MS</option>
+                <option value="5MS">5MS</option>
+                <option value="1AP">1AP</option>
+                <option value="2AP">2AP</option>
+                <option value="3AP">3AP</option>
+                <option value="4AP">4AP</option>
+                <option value="5AP">5AP</option>
+                <option value="NS">غير محدد</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">اسم ولي الأمر</label>
+              <input type="text" class="form-control" id="student-parent-name" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">رقم هاتف ولي الأمر</label>
+              <input type="tel" class="form-control" id="student-parent-phone" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني (اختياري)</label>
+              <input type="email" class="form-control" id="student-email">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">تاريخ الميلاد (اختياري)</label>
+              <input type="date" class="form-control" id="student-birthdate">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('add-student-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="addStudent()">إضافة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Teacher Modal -->
+  <div class="modal" id="add-teacher-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">إضافة أستاذ جديد</h5>
+          <button class="modal-close" onclick="closeModal('add-teacher-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-teacher-form">
+            <div class="form-group">
+              <label class="form-label">الاسم الكامل</label>
+              <input type="text" class="form-control" id="teacher-name" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">المواد</label>
+              <select class="form-select" id="teacher-subjects" multiple size="5">
+                <option value="رياضيات">رياضيات</option>
+                <option value="فيزياء">فيزياء</option>
+                <option value="علوم">علوم</option>
+                <option value="لغة عربية">لغة عربية</option>
+                <option value="لغة فرنسية">لغة فرنسية</option>
+                <option value="لغة انجليزية">لغة انجليزية</option>
+                <option value="تاريخ">تاريخ</option>
+                <option value="جغرافيا">جغرافيا</option>
+                <option value="فلسفة">فلسفة</option>
+                <option value="إعلام آلي">إعلام آلي</option>
+              </select>
+              <small class="form-text">اضغط Ctrl لتحديد أكثر من مادة</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">رقم الهاتف</label>
+              <input type="tel" class="form-control" id="teacher-phone" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني (اختياري)</label>
+              <input type="email" class="form-control" id="teacher-email">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">نسبة العمولة (%)</label>
+              <input type="number" class="form-control" id="teacher-percentage" value="70" min="0" max="100" step="1">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('add-teacher-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="addTeacher()">إضافة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Class Modal -->
+  <div class="modal" id="add-class-modal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">إنشاء حصة جديدة</h5>
+          <button class="modal-close" onclick="closeModal('add-class-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-class-form">
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">اسم الحصة</label>
+                  <input type="text" class="form-control" id="class-name" required>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">المادة</label>
+                  <select class="form-select" id="class-subject" required>
+                    <option value="">اختر المادة</option>
+                    <option value="رياضيات">رياضيات</option>
+                    <option value="فيزياء">فيزياء</option>
+                    <option value="علوم">علوم</option>
+                    <option value="لغة عربية">لغة عربية</option>
+                    <option value="لغة فرنسية">لغة فرنسية</option>
+                    <option value="لغة انجليزية">لغة انجليزية</option>
+                    <option value="تاريخ">تاريخ</option>
+                    <option value="جغرافيا">جغرافيا</option>
+                    <option value="فلسفة">فلسفة</option>
+                    <option value="إعلام آلي">إعلام آلي</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">السنة الدراسية</label>
+                  <select class="form-select" id="class-academic-year" required>
+                    <option value="">اختر السنة</option>
+                    <option value="1AS">1AS</option>
+                    <option value="2AS">2AS</option>
+                    <option value="3AS">3AS</option>
+                    <option value="1MS">1MS</option>
+                    <option value="2MS">2MS</option>
+                    <option value="3MS">3MS</option>
+                    <option value="4MS">4MS</option>
+                    <option value="5MS">5MS</option>
+                    <option value="1AP">1AP</option>
+                    <option value="2AP">2AP</option>
+                    <option value="3AP">3AP</option>
+                    <option value="4AP">4AP</option>
+                    <option value="5AP">5AP</option>
+                    <option value="NS">غير محدد</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">الأستاذ</label>
+                  <select class="form-select" id="class-teacher" required>
+                    <option value="">اختر الأستاذ</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">السعر (د.ج)</label>
+                  <input type="number" class="form-control" id="class-price" required min="0">
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label class="form-label">نظام الدفع</label>
+                  <select class="form-select" id="class-payment-system" required>
+                    <option value="monthly">شهري</option>
+                    <option value="rounds">جولات (دورة)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div id="round-settings" style="display: none;">
+              <h6>إعدادات الجولات</h6>
+              <div class="row">
+                <div class="col">
+                  <div class="form-group">
+                    <label class="form-label">عدد الجلسات في الجولة</label>
+                    <input type="number" class="form-control" id="round-session-count" value="8" min="1">
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="form-group">
+                    <label class="form-label">مدة الجلسة (ساعات)</label>
+                    <input type="number" class="form-control" id="round-session-duration" value="2" min="1">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">وصف الحصة (اختياري)</label>
+              <textarea class="form-control" id="class-description" rows="3"></textarea>
+            </div>
+            
+            <h6>الجدول الزمني</h6>
+            <div id="schedule-container">
+              <div class="schedule-item row">
+                <div class="col">
+                  <select class="form-select schedule-day">
+                    <option value="السبت">السبت</option>
+                    <option value="الأحد">الأحد</option>
+                    <option value="الإثنين">الإثنين</option>
+                    <option value="الثلاثاء">الثلاثاء</option>
+                    <option value="الأربعاء">الأربعاء</option>
+                    <option value="الخميس">الخميس</option>
+                    <option value="الجمعة">الجمعة</option>
+                  </select>
+                </div>
+                <div class="col">
+                  <input type="time" class="form-control schedule-time" value="08:00">
+                </div>
+                <div class="col">
+                  <select class="form-select schedule-classroom">
+                    <option value="">اختر القاعة</option>
+                  </select>
+                </div>
+                <div class="col">
+                  <button type="button" class="btn btn-danger btn-sm" onclick="removeScheduleItem(this)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addScheduleItem()">
+              <i class="fas fa-plus"></i>
+              إضافة موعد
+            </button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('add-class-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="addClass()">إنشاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Payment Modal -->
+  <div class="modal" id="add-payment-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">تسجيل دفعة جديدة</h5>
+          <button class="modal-close" onclick="closeModal('add-payment-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-payment-form">
+            <div class="form-group">
+              <label class="form-label">الطالب</label>
+              <select class="form-select" id="payment-student" required>
+                <option value="">اختر الطالب</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">الحصة</label>
+              <select class="form-select" id="payment-class" required>
+                <option value="">اختر الحصة</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">المبلغ (د.ج)</label>
+              <input type="number" class="form-control" id="payment-amount" required min="0">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">الشهر</label>
+              <input type="month" class="form-control" id="payment-month" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">طريقة الدفع</label>
+              <select class="form-select" id="payment-method" required>
+                <option value="cash">نقدي</option>
+                <option value="bank">تحويل بنكي</option>
+                <option value="online">دفع إلكتروني</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">ملاحظات (اختياري)</label>
+              <textarea class="form-control" id="payment-notes" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('add-payment-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="addPayment()">تسجيل</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Class Modal -->
+  <div class="modal" id="schedule-class-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">جدولة حصة حية</h5>
+          <button class="modal-close" onclick="closeModal('schedule-class-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="schedule-class-form">
+            <div class="form-group">
+              <label class="form-label">الحصة</label>
+              <select class="form-select" id="live-class-class" required>
+                <option value="">اختر الحصة</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">التاريخ</label>
+              <input type="date" class="form-control" id="live-class-date" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">وقت البدء</label>
+              <input type="time" class="form-control" id="live-class-start-time" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">وقت الانتهاء</label>
+              <input type="time" class="form-control" id="live-class-end-time" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">الأستاذ</label>
+              <select class="form-select" id="live-class-teacher" required>
+                <option value="">اختر الأستاذ</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">القاعة</label>
+              <select class="form-select" id="live-class-classroom">
+                <option value="">اختر القاعة</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">ملاحظات (اختياري)</label>
+              <textarea class="form-control" id="live-class-notes" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('schedule-class-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="scheduleLiveClass()">جدولة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Card Modal -->
+  <div class="modal" id="add-card-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">إضافة بطاقة RFID</h5>
+          <button class="modal-close" onclick="closeModal('add-card-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="add-card-form">
+            <div class="form-group">
+              <label class="form-label">UID البطاقة</label>
+              <input type="text" class="form-control" id="card-uid" required placeholder="ادخل UID البطاقة">
+              <small class="form-text">يمكنك مسح البطاقة باستخدام القارئ</small>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">الطالب</label>
+              <select class="form-select" id="card-student" required>
+                <option value="">اختر الطالب</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('add-card-modal')">إلغاء</button>
+          <button class="btn btn-primary" onclick="addCard()">إضافة</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Class Details Modal -->
+  <div class="modal" id="view-class-modal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="view-class-title">تفاصيل الحصة</h5>
+          <button class="modal-close" onclick="closeModal('view-class-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col">
+              <p><strong>المادة:</strong> <span id="view-class-subject"></span></p>
+              <p><strong>الأستاذ:</strong> <span id="view-class-teacher"></span></p>
+              <p><strong>السعر:</strong> <span id="view-class-price"></span> د.ج</p>
+            </div>
+            <div class="col">
+              <p><strong>السنة الدراسية:</strong> <span id="view-class-academic-year"></span></p>
+              <p><strong>نظام الدفع:</strong> <span id="view-class-payment-system"></span></p>
+              <p><strong>عدد الطلاب:</strong> <span id="view-class-students-count">0</span></p>
+            </div>
+          </div>
+          
+          <h6 class="mt-3">الجدول الزمني</h6>
+          <div class="table-responsive">
+            <table class="table" id="view-class-schedule">
+              <thead>
+                <tr>
+                  <th>اليوم</th>
+                  <th>الوقت</th>
+                  <th>القاعة</th>
+                </tr>
+              </thead>
+              <tbody id="view-class-schedule-list"></tbody>
+            </table>
+          </div>
+          
+          <h6 class="mt-3">الطلاب المسجلين</h6>
+          <div class="table-responsive">
+            <table class="table" id="view-class-students">
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>رقم الطالب</th>
+                  <th>ولي الأمر</th>
+                  <th>رقم الهاتف</th>
+                </tr>
+              </thead>
+              <tbody id="view-class-students-list"></tbody>
+            </table>
+          </div>
+          
+          <h6 class="mt-3">المدفوعات</h6>
+          <div class="table-responsive">
+            <table class="table" id="view-class-payments">
+              <thead>
+                <tr>
+                  <th>الطالب</th>
+                  <th>المبلغ</th>
+                  <th>الشهر</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="view-class-payments-list"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('view-class-modal')">إغلاق</button>
+          <button class="btn btn-primary" onclick="editClass()">تعديل</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Student Details Modal -->
+  <div class="modal" id="view-student-modal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="view-student-title">تفاصيل الطالب</h5>
+          <button class="modal-close" onclick="closeModal('view-student-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col">
+              <p><strong>رقم الطالب:</strong> <span id="view-student-id"></span></p>
+              <p><strong>الاسم:</strong> <span id="view-student-name"></span></p>
+              <p><strong>السنة الدراسية:</strong> <span id="view-student-academic-year"></span></p>
+            </div>
+            <div class="col">
+              <p><strong>ولي الأمر:</strong> <span id="view-student-parent-name"></span></p>
+              <p><strong>رقم الهاتف:</strong> <span id="view-student-parent-phone"></span></p>
+              <p><strong>البريد الإلكتروني:</strong> <span id="view-student-email"></span></p>
+            </div>
+          </div>
+          
+          <h6 class="mt-3">الحصص المسجل فيها</h6>
+          <div class="table-responsive">
+            <table class="table" id="view-student-classes">
+              <thead>
+                <tr>
+                  <th>اسم الحصة</th>
+                  <th>المادة</th>
+                  <th>الأستاذ</th>
+                  <th>السعر</th>
+                </tr>
+              </thead>
+              <tbody id="view-student-classes-list"></tbody>
+            </table>
+          </div>
+          
+          <h6 class="mt-3">المدفوعات</h6>
+          <div class="table-responsive">
+            <table class="table" id="view-student-payments">
+              <thead>
+                <tr>
+                  <th>الحصة</th>
+                  <th>المبلغ</th>
+                  <th>الشهر</th>
+                  <th>تاريخ الدفع</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="view-student-payments-list"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('view-student-modal')">إغلاق</button>
+          <button class="btn btn-primary" onclick="editStudent()">تعديل</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container" style="position: fixed; bottom: 20px; left: 20px; z-index: 1060;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.4/dist/socket.io.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

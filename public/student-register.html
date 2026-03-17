@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل طالب جديد - نظام إدارة المدرسة</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/rtl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .register-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .register-card {
+      background-color: var(--card-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 2rem;
+    }
+    
+    .register-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .register-header h1 {
+      color: var(--primary-color);
+      font-size: 1.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .register-header p {
+      color: var(--gray-color);
+    }
+    
+    .register-logo {
+      font-size: 3rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+    
+    .register-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: var(--gray-color);
+    }
+    
+    .register-footer a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    .register-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <div class="register-card">
+      <div class="register-header">
+        <div class="register-logo">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <h1>تسجيل طالب جديد</h1>
+        <p>أدخل بيانات الطالب للتسجيل في المدرسة</p>
+      </div>
+      
+      <form id="register-form" onsubmit="handleStudentRegister(event)">
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">الاسم الكامل للطالب <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="student-name" required>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">تاريخ الميلاد</label>
+              <input type="date" class="form-control" id="student-birthdate">
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">السنة الدراسية <span class="text-danger">*</span></label>
+              <select class="form-select" id="student-academic-year" required>
+                <option value="">اختر السنة</option>
+                <option value="1AS">1AS</option>
+                <option value="2AS">2AS</option>
+                <option value="3AS">3AS</option>
+                <option value="1MS">1MS</option>
+                <option value="2MS">2MS</option>
+                <option value="3MS">3MS</option>
+                <option value="4MS">4MS</option>
+                <option value="5MS">5MS</option>
+                <option value="1AP">1AP</option>
+                <option value="2AP">2AP</option>
+                <option value="3AP">3AP</option>
+                <option value="4AP">4AP</option>
+                <option value="5AP">5AP</option>
+                <option value="NS">غير محدد</option>
+              </select>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">المدرسة السابقة</label>
+              <input type="text" class="form-control" id="previous-school">
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">اسم ولي الأمر <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="parent-name" required>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">رقم هاتف ولي الأمر <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" id="parent-phone" required placeholder="05XX XX XX XX">
+            </div>
+          </div>
+        </div>
+        
+        <div class="row">
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">البريد الإلكتروني</label>
+              <input type="email" class="form-control" id="parent-email" placeholder="example@email.com">
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-group">
+              <label class="form-label">العنوان</label>
+              <input type="text" class="form-control" id="address">
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">معلومات صحية (اختياري)</label>
+          <textarea class="form-control" id="health-info" rows="3" placeholder="أي معلومات صحية مهمة عن الطالب"></textarea>
+        </div>
+        
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          سيتم مراجعة طلب التسجيل من قبل الإدارة وسيتم إعلامك بنتيجة الطلب عبر رسالة نصية.
+        </div>
+        
+        <div class="form-group">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-paper-plane"></i>
+            إرسال طلب التسجيل
+          </button>
+        </div>
+      </form>
+      
+      <div class="register-footer">
+        <p>لديك حساب بالفعل؟ <a href="/student/login">تسجيل الدخول</a></p>
+        <p>العودة إلى <a href="/">الصفحة الرئيسية</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="status-check-modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">التحقق من حالة الطلب</h5>
+          <button class="modal-close" onclick="closeModal('status-check-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="status-check-form" onsubmit="checkStatus(event)">
+            <div class="form-group">
+              <label class="form-label">رقم الطالب</label>
+              <input type="text" class="form-control" id="check-student-id" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم هاتف ولي الأمر</label>
+              <input type="tel" class="form-control" id="check-parent-phone" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">تحقق</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+  <script>
+    async function handleStudentRegister(event) {
+      event.preventDefault();
+      
+      const formData = {
+        name: document.getElementById('student-name').value,
+        birthDate: document.getElementById('student-birthdate').value,
+        academicYear: document.getElementById('student-academic-year').value,
+        parentName: document.getElementById('parent-name').value,
+        parentPhone: document.getElementById('parent-phone').value,
+        parentEmail: document.getElementById('parent-email').value,
+        address: document.getElementById('address').value,
+        previousSchool: document.getElementById('previous-school').value,
+        healthInfo: document.getElementById('health-info').value
+      };
+      
+      // Validate required fields
+      if (!formData.name || !formData.academicYear || !formData.parentName || !formData.parentPhone) {
+        showToast('يرجى ملء جميع الحقول المطلوبة', 'warning');
+        return;
+      }
+      
+      try {
+        const result = await apiRequest('/api/student/register', 'POST', formData);
+        
+        showToast('تم إرسال طلب التسجيل بنجاح', 'success');
+        
+        // Clear form
+        document.getElementById('register-form').reset();
+        
+        // Show message with instructions
+        setTimeout(() => {
+          if (confirm('تم إرسال طلبك بنجاح. هل تريد التحقق من حالة الطلب الآن؟')) {
+            openModal('status-check-modal');
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Registration error:', error);
+      }
+    }
+    
+    async function checkStatus(event) {
+      event.preventDefault();
+      
+      const studentId = document.getElementById('check-student-id').value;
+      const parentPhone = document.getElementById('check-parent-phone').value;
+      
+      if (!studentId || !parentPhone) {
+        showToast('يرجى إدخال رقم الطالب ورقم الهاتف', 'warning');
+        return;
+      }
+      
+      try {
+        const result = await apiRequest('/api/student/status', 'POST', { studentId, parentPhone });
+        
+        closeModal('status-check-modal');
+        
+        let statusMessage = '';
+        switch(result.status) {
+          case 'active':
+            statusMessage = 'تم قبول طلبك. يمكنك الآن تسجيل الدخول باستخدام حسابك.';
+            break;
+          case 'pending':
+            statusMessage = 'طلبك قيد المراجعة. سيتم إعلامك عند القبول.';
+            break;
+          case 'inactive':
+            statusMessage = 'عذراً، لم يتم قبول طلبك. يرجى التواصل مع الإدارة.';
+            break;
+          default:
+            statusMessage = 'حالة الطلب: ' + result.status;
+        }
+        
+        showToast(statusMessage, result.status === 'active' ? 'success' : 'info');
+        
+      } catch (error) {
+        console.error('Status check error:', error);
+      }
+    }
+  </script>
+</body>
+</html>

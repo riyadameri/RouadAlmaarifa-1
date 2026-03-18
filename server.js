@@ -397,34 +397,35 @@
       recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
     });
 
-    // Teacher Commission Schema
-    const teacherCommissionSchema = new mongoose.Schema({
-      teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
-      student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: false }, // جعلها غير مطلوبة للحصص الشاملة
-      class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
-      month: { type: String, required: true },
-      amount: { type: Number, required: true },
-      percentage: { type: Number, required: true },
-      type: { 
-        type: String, 
-        enum: ['individual', 'class'], 
-        default: 'individual' 
-      },
-      round: String,
-      status: { type: String, enum: ['pending', 'paid'], default: 'pending' },
-      paymentDate: { type: Date, default: null },
-      paymentMethod: { type: String, enum: ['cash', 'bank', 'online'], default: 'cash' },
-      receiptNumber: String,
-      recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      studentDetails: [{
-        student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
-        attendancesCount: Number,
-        teacherShare: Number,
-        includedInCommission: { type: Boolean, default: true }
-      }],
-      notes: String
-    });
-    
+// Teacher Commission Schema
+const teacherCommissionSchema = new mongoose.Schema({
+  teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'Teacher', required: true },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: false },
+  class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', required: true },
+  month: { type: String, required: true },
+  round: { type: String, required: false },
+  amount: { type: Number, required: true },
+  percentage: { type: Number, required: true },
+  type: { 
+    type: String, 
+    enum: ['individual', 'class'], 
+    default: 'individual' 
+  },
+  status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
+  paymentDate: { type: Date, default: null },
+  paymentMethod: { type: String, enum: ['cash', 'bank', 'online'], default: 'cash' },
+  receiptNumber: { type: String, required: false },
+  recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  studentDetails: [{
+    student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+    attendancesCount: Number,
+    teacherShare: Number,
+    includedInCommission: { type: Boolean, default: true }
+  }],
+  notes: { type: String, required: false }
+}, { timestamps: true });
+
+// Create the model
     // Create models
     const Budget = mongoose.model('Budget', budgetSchema);
     const TeacherCommission = mongoose.model('TeacherCommission', teacherCommissionSchema);
@@ -1012,7 +1013,615 @@
 
 
   // في server.js
-
+  app.get('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const commission = await TeacherCommission.findById(req.params.id)
+        .populate('teacher', 'name phone email')
+        .populate('student', 'name studentId')
+        .populate('class', 'name subject price')
+        .populate('recordedBy', 'username fullName')
+        .populate({
+          path: 'studentDetails.student',
+          select: 'name studentId'
+        });
+  
+      if (!commission) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'العمولة غير موجودة' 
+        });
+      }
+  
+      res.json({
+        success: true,
+        data: commission
+      });
+    } catch (err) {
+      console.error('Error fetching commission:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  
+  // POST /api/accounting/teacher-commissions - Create new commission
+  app.post('/api/accounting/teacher-commissions', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { 
+        teacherId, 
+        studentId, 
+        classId, 
+        month, 
+        round,
+        amount, 
+        percentage, 
+        type,
+        studentDetails,
+        notes 
+      } = req.body;
+  
+      // Validate required fields
+      if (!teacherId || !classId || !month || !amount) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'البيانات ناقصة: يجب توفير teacherId, classId, month, amount' 
+        });
+      }
+  
+      // Check if teacher exists
+      const teacher = await Teacher.findById(teacherId);
+      if (!teacher) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'الأستاذ غير موجود' 
+        });
+      }
+  
+      // Check if class exists
+      const classObj = await Class.findById(classId);
+      if (!classObj) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'الحصة غير موجودة' 
+        });
+      }
+  
+      // If student commission, check if student exists
+      if (type === 'individual' && studentId) {
+        const student = await Student.findById(studentId);
+        if (!student) {
+          return res.status(404).json({ 
+            success: false,
+            error: 'الطالب غير موجود' 
+          });
+        }
+      }
+  
+      // Check for existing commission to avoid duplicates
+      const existingCommission = await TeacherCommission.findOne({
+        teacher: teacherId,
+        class: classId,
+        month: month,
+        ...(type === 'individual' && { student: studentId }),
+        type: type
+      });
+  
+      if (existingCommission) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'تم تسجيل هذه العمولة مسبقاً',
+          existingCommission 
+        });
+      }
+  
+      // Create new commission
+      const commission = new TeacherCommission({
+        teacher: teacherId,
+        student: type === 'individual' ? studentId : null,
+        class: classId,
+        month: month,
+        round: round || null,
+        amount: amount,
+        percentage: percentage || 70,
+        type: type || 'individual',
+        status: 'pending',
+        recordedBy: req.user.id,
+        notes: notes || '',
+        studentDetails: studentDetails || []
+      });
+  
+      await commission.save();
+  
+      // Populate for response
+      await commission.populate('teacher', 'name');
+      await commission.populate('student', 'name');
+      await commission.populate('class', 'name subject');
+  
+      res.status(201).json({
+        success: true,
+        message: 'تم إنشاء العمولة بنجاح',
+        data: commission
+      });
+  
+    } catch (err) {
+      console.error('Error creating commission:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  
+  
+  // POST /api/accounting/teacher-commissions/pay-single - Pay a single commission
+  app.post('/api/accounting/teacher-commissions/pay-single', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { commissionId, paymentMethod, paymentDate, notes } = req.body;
+  
+      if (!commissionId) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'معرف العمولة مطلوب' 
+        });
+      }
+  
+      // Find the commission
+      const commission = await TeacherCommission.findById(commissionId)
+        .populate('teacher')
+        .populate('student')
+        .populate('class');
+  
+      if (!commission) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'العمولة غير موجودة' 
+        });
+      }
+  
+      // Check if already paid
+      if (commission.status === 'paid') {
+        return res.status(400).json({ 
+          success: false,
+          error: 'العمولة مدفوعة مسبقاً' 
+        });
+      }
+  
+      // Update commission
+      commission.status = 'paid';
+      commission.paymentDate = paymentDate || new Date();
+      commission.paymentMethod = paymentMethod || 'cash';
+      commission.receiptNumber = `COMM-${Date.now()}`;
+      commission.recordedBy = req.user.id;
+      
+      if (notes) {
+        commission.notes = notes;
+      }
+  
+      await commission.save();
+  
+      // Create expense record
+      const expense = new Expense({
+        description: `عمولة الأستاذ ${commission.teacher.name} ${commission.student ? `عن الطالب ${commission.student.name}` : ''} لحصة ${commission.class.name} لشهر ${commission.month}`,
+        amount: commission.amount,
+        category: 'salary',
+        type: 'teacher_payment',
+        recipient: {
+          type: 'teacher',
+          id: commission.teacher._id,
+          name: commission.teacher.name
+        },
+        paymentMethod: commission.paymentMethod,
+        receiptNumber: commission.receiptNumber,
+        status: 'paid',
+        recordedBy: req.user.id,
+        notes: commission.notes || ''
+      });
+  
+      await expense.save();
+  
+      // Create financial transaction
+      const transaction = new FinancialTransaction({
+        type: 'expense',
+        amount: commission.amount,
+        description: expense.description,
+        category: 'salary',
+        recordedBy: req.user.id,
+        reference: commission._id,
+        date: commission.paymentDate
+      });
+  
+      await transaction.save();
+  
+      res.json({
+        success: true,
+        message: 'تم دفع العمولة بنجاح',
+        data: {
+          commission,
+          expense: {
+            _id: expense._id,
+            receiptNumber: expense.receiptNumber
+          },
+          transaction: transaction._id
+        }
+      });
+  
+    } catch (err) {
+      console.error('Error paying commission:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  
+  
+  // POST /api/accounting/teacher-commissions/pay-all - Pay all pending commissions for a month
+  app.post('/api/accounting/teacher-commissions/pay-all', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { month, paymentMethod, paymentDate, notes } = req.body;
+  
+      if (!month) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'الشهر مطلوب' 
+        });
+      }
+  
+      // Find all pending commissions for the month
+      const commissions = await TeacherCommission.find({
+        month: month,
+        status: 'pending'
+      }).populate('teacher').populate('student').populate('class');
+  
+      if (commissions.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'لا توجد عمولات معلقة لهذا الشهر' 
+        });
+      }
+  
+      const results = {
+        total: commissions.length,
+        paid: 0,
+        failed: 0,
+        totalAmount: 0,
+        commissions: [],
+        expenses: []
+      };
+  
+      // Process each commission
+      for (const commission of commissions) {
+        try {
+          // Update commission
+          commission.status = 'paid';
+          commission.paymentDate = paymentDate || new Date();
+          commission.paymentMethod = paymentMethod || 'cash';
+          commission.receiptNumber = `COMM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          commission.recordedBy = req.user.id;
+          
+          if (notes) {
+            commission.notes = notes;
+          }
+  
+          await commission.save();
+  
+          // Create expense record
+          const expense = new Expense({
+            description: `عمولة الأستاذ ${commission.teacher.name} ${commission.student ? `عن الطالب ${commission.student.name}` : ''} لحصة ${commission.class.name} لشهر ${commission.month}`,
+            amount: commission.amount,
+            category: 'salary',
+            type: 'teacher_payment',
+            recipient: {
+              type: 'teacher',
+              id: commission.teacher._id,
+              name: commission.teacher.name
+            },
+            paymentMethod: commission.paymentMethod,
+            receiptNumber: commission.receiptNumber,
+            status: 'paid',
+            recordedBy: req.user.id,
+            notes: commission.notes || ''
+          });
+  
+          await expense.save();
+  
+          // Create financial transaction
+          const transaction = new FinancialTransaction({
+            type: 'expense',
+            amount: commission.amount,
+            description: expense.description,
+            category: 'salary',
+            recordedBy: req.user.id,
+            reference: commission._id,
+            date: commission.paymentDate
+          });
+  
+          await transaction.save();
+  
+          results.paid++;
+          results.totalAmount += commission.amount;
+          results.commissions.push({
+            _id: commission._id,
+            teacher: commission.teacher.name,
+            amount: commission.amount
+          });
+          results.expenses.push(expense._id);
+  
+        } catch (err) {
+          console.error('Error processing commission:', err);
+          results.failed++;
+        }
+      }
+  
+      res.json({
+        success: true,
+        message: `تم دفع ${results.paid} من ${results.total} عمولة بنجاح`,
+        data: results
+      });
+  
+    } catch (err) {
+      console.error('Error paying all commissions:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  // POST /api/accounting/teacher-commissions/generate-for-month - Generate commissions for a month
+  app.post('/api/accounting/teacher-commissions/generate-for-month', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { month } = req.body;
+  
+      if (!month) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'الشهر مطلوب' 
+        });
+      }
+  
+      // Get all classes with teachers
+      const classes = await Class.find({ 
+        teacher: { $ne: null },
+        students: { $ne: [] }
+      }).populate('teacher').populate('students');
+  
+      const results = {
+        generated: 0,
+        skipped: 0,
+        total: classes.length,
+        commissions: []
+      };
+  
+      for (const classObj of classes) {
+        // Check if commission already exists for this class and month
+        const existingCommission = await TeacherCommission.findOne({
+          teacher: classObj.teacher._id,
+          class: classObj._id,
+          month: month,
+          type: 'class'
+        });
+  
+        if (existingCommission) {
+          results.skipped++;
+          continue;
+        }
+  
+        // Calculate commission (70% of class price)
+        const commissionAmount = classObj.price * 0.7;
+  
+        // Create student details
+        const studentDetails = classObj.students.map(student => ({
+          student: student._id,
+          attendancesCount: 0,
+          teacherShare: commissionAmount / classObj.students.length,
+          includedInCommission: true
+        }));
+  
+        // Create commission
+        const commission = new TeacherCommission({
+          teacher: classObj.teacher._id,
+          class: classObj._id,
+          month: month,
+          amount: commissionAmount,
+          percentage: 70,
+          type: 'class',
+          status: 'pending',
+          recordedBy: req.user.id,
+          notes: `تم إنشاؤها تلقائياً لشهر ${month}`,
+          studentDetails: studentDetails
+        });
+  
+        await commission.save();
+        
+        results.generated++;
+        results.commissions.push({
+          _id: commission._id,
+          teacher: classObj.teacher.name,
+          class: classObj.name,
+          amount: commissionAmount
+        });
+      }
+  
+      res.json({
+        success: true,
+        message: `تم إنشاء ${results.generated} عمولة جديدة، وتخطي ${results.skipped}`,
+        data: results
+      });
+  
+    } catch (err) {
+      console.error('Error generating commissions:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  
+  
+  // PUT /api/accounting/teacher-commissions/:id - Update commission
+  app.put('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { amount, percentage, status, notes, studentDetails } = req.body;
+  
+      const commission = await TeacherCommission.findById(req.params.id);
+  
+      if (!commission) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'العمولة غير موجودة' 
+        });
+      }
+  
+      // Update fields
+      if (amount) commission.amount = amount;
+      if (percentage) commission.percentage = percentage;
+      if (status) commission.status = status;
+      if (notes) commission.notes = notes;
+      if (studentDetails) commission.studentDetails = studentDetails;
+  
+      await commission.save();
+  
+      await commission.populate('teacher', 'name');
+      await commission.populate('student', 'name');
+      await commission.populate('class', 'name');
+  
+      res.json({
+        success: true,
+        message: 'تم تحديث العمولة بنجاح',
+        data: commission
+      });
+  
+    } catch (err) {
+      console.error('Error updating commission:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  // DELETE /api/accounting/teacher-commissions/:id - Delete/cancel commission
+  app.delete('/api/accounting/teacher-commissions/:id', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const commission = await TeacherCommission.findById(req.params.id);
+  
+      if (!commission) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'العمولة غير موجودة' 
+        });
+      }
+  
+      // Soft delete - mark as cancelled instead of actually deleting
+      commission.status = 'cancelled';
+      await commission.save();
+  
+      res.json({
+        success: true,
+        message: 'تم إلغاء العمولة بنجاح'
+      });
+  
+    } catch (err) {
+      console.error('Error cancelling commission:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
+  
+  // GET /api/accounting/teacher-commissions/summary - Get summary statistics
+  app.get('/api/accounting/teacher-commissions/summary', authenticate(['admin', 'accountant']), async (req, res) => {
+    try {
+      const { month, year } = req.query;
+  
+      const matchStage = {};
+      if (month) matchStage.month = month;
+      if (year) matchStage.month = { $regex: `^${year}` };
+  
+      const summary = await TeacherCommission.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: '$status',
+            totalAmount: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+  
+      const teachersSummary = await TeacherCommission.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: '$teacher',
+            totalAmount: { $sum: '$amount' },
+            pendingAmount: {
+              $sum: {
+                $cond: [{ $eq: ['$status', 'pending'] }, '$amount', 0]
+              }
+            },
+            paidAmount: {
+              $sum: {
+                $cond: [{ $eq: ['$status', 'paid'] }, '$amount', 0]
+              }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $lookup: {
+            from: 'teachers',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'teacher'
+          }
+        },
+        {
+          $project: {
+            teacher: { $arrayElemAt: ['$teacher', 0] },
+            totalAmount: 1,
+            pendingAmount: 1,
+            paidAmount: 1,
+            count: 1
+          }
+        }
+      ]);
+  
+      const result = {
+        byStatus: summary.reduce((acc, item) => {
+          acc[item._id] = {
+            amount: item.totalAmount,
+            count: item.count
+          };
+          return acc;
+        }, {}),
+        byTeacher: teachersSummary,
+        total: {
+          amount: summary.reduce((sum, item) => sum + item.totalAmount, 0),
+          count: summary.reduce((sum, item) => sum + item.count, 0)
+        }
+      };
+  
+      res.json({
+        success: true,
+        data: result
+      });
+  
+    } catch (err) {
+      console.error('Error getting commissions summary:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
+    }
+  });
   // الحصول على جدول دراسة القاعة
   app.get('/api/classrooms/:id/schedule',  async (req, res) => {
     try {
@@ -2129,7 +2738,7 @@ app.post('/api/classes/:classId/attendance/bulk', async (req, res) => {
 // ==============================================
 // نقطة نهاية إلغاء الدفعة (جعلها غير مدفوعة)
 // ==============================================
-app.put('/api/payments/:id/cancel', authenticate(['admin', 'accountant', 'secretary']), async (req, res) => {
+app.put('/api/payments/:id/cancel',  async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id)
       .populate('student', 'name studentId')
@@ -2203,7 +2812,7 @@ app.put('/api/payments/:id/cancel', authenticate(['admin', 'accountant', 'secret
 // ==============================================
 // نقطة نهاية تسديد دفعة معلقة
 // ==============================================
-app.put('/api/payments/:id/pay', authenticate(['admin', 'accountant', 'secretary']), async (req, res) => {
+app.put('/api/payments/:id/pay',  async (req, res) => {
   try {
     const { paymentMethod, paymentDate, notes } = req.body;
     
@@ -2892,62 +3501,7 @@ app.get('/api/classes/:classId/attendance', authenticate(['admin', 'teacher']), 
   });
 
   // إضافة نقطة نهاية جديدة لدفع عمولة فردية
-  app.post('/api/accounting/teacher-commissions/pay-single',  async (req, res) => {
-    try {
-        const { commissionId, paymentMethod, paymentDate } = req.body;
-        
-        const commission = await TeacherCommission.findById(commissionId)
-            .populate('teacher')
-            .populate('student')
-            .populate('class');
 
-        if (!commission) {
-            return res.status(404).json({ error: 'سجل العمولة غير موجود' });
-        }
-
-        if (commission.status === 'paid') {
-            return res.status(400).json({ error: 'تم دفع العمولة مسبقاً' });
-        }
-
-        commission.status = 'paid';
-        commission.paymentDate = paymentDate || new Date();
-        commission.paymentMethod = paymentMethod || 'cash';
-        commission.receiptNumber = `COMM-${Date.now()}`;
-        commission.recordedBy = req.user.id;
-
-        await commission.save();
-        
-        // تسجيل المصروف
-        const expense = new Expense({
-            description: `عمولة الأستاذ ${commission.teacher.name} عن الطالب ${commission.student.name} لحصة ${commission.class.name} لشهر ${commission.month}`,
-            amount: commission.amount,
-            category: 'salary',
-            type: 'teacher_payment',
-            recipient: {
-                type: 'teacher',
-                id: commission.teacher._id,
-                name: commission.teacher.name
-            },
-            paymentMethod: commission.paymentMethod,
-            receiptNumber: commission.receiptNumber,
-            status: 'paid',
-            recordedBy: req.user.id
-        });
-
-        await expense.save();
-        
-        // تحديث الرصيد (خصم المبلغ)
-        await updateTotalBalance(-commission.amount);
-
-        res.json({
-            message: 'تم دفع عمولة الأستاذ بنجاح',
-            commission,
-            receiptNumber: commission.receiptNumber
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-  });
 
   // تحسين نقطة نهاية التقارير
   app.get('/api/accounting/reports/financial',  async (req, res) => {
@@ -8637,56 +9191,56 @@ app.get('/cards-auth', (req, res) => {
 
 
 // Dore (Rounds) Management Routes
-app.get('/dore', authenticate(['admin', 'accountant']), (req, res) => {
+app.get('/dore',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dore.html'));
 });
 
-app.get('/dore/*', authenticate(['admin', 'accountant']), (req, res) => {
+app.get('/dore/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dore.html'));
 });
 
 // Attendance Management Routes
-app.get('/attendance', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/attendance',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'attendance.html'));
 });
 
-app.get('/attendance/*', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/attendance/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'attendance.html'));
 });
 
 // Reports Routes
-app.get('/reports', authenticate(['admin', 'accountant']), (req, res) => {
+app.get('/reports',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reports.html'));
 });
 
-app.get('/reports/*', authenticate(['admin', 'accountant']), (req, res) => {
+app.get('/reports/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'reports.html'));
 });
 
 // Classes Management Routes
-app.get('/classes', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/classes',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'classes.html'));
 });
 
-app.get('/classes/*', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/classes/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'classes.html'));
 });
 
 // Payments Management Routes
-app.get('/payments', authenticate(['admin', 'accountant', 'secretary']), (req, res) => {
+app.get('/payments',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'payments.html'));
 });
 
-app.get('/payments/*', authenticate(['admin', 'accountant', 'secretary']), (req, res) => {
+app.get('/payments/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'payments.html'));
 });
 
 // Students Management Routes
-app.get('/students', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/students',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'students.html'));
 });
 
-app.get('/students/*', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/students/*',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'students.html'));
 });
 
@@ -8705,7 +9259,7 @@ app.get('/settings', authenticate(['admin']), (req, res) => {
 });
 
 // Profile Routes
-app.get('/profile', authenticate(['admin', 'teacher', 'student', 'accountant', 'secretary']), (req, res) => {
+app.get('/profile',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
@@ -8749,7 +9303,7 @@ app.get('/class-attendance/:classId', authenticate(['admin', 'teacher']), (req, 
 });
 
 // Student Details Page
-app.get('/student/:id', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/student/:id',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student-details.html'));
 });
 
@@ -8759,27 +9313,27 @@ app.get('/teacher/:id', authenticate(['admin', 'secretary']), (req, res) => {
 });
 
 // Class Details Page
-app.get('/class/:id', authenticate(['admin', 'teacher', 'secretary']), (req, res) => {
+app.get('/class/:id',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'class-details.html'));
 });
 
 // Payment Details Page
-app.get('/payment/:id', authenticate(['admin', 'accountant', 'secretary']), (req, res) => {
+app.get('/payment/:id',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'payment-details.html'));
 });
 
 // Invoice Page
-app.get('/invoice/:id', authenticate(['admin', 'accountant', 'student']), (req, res) => {
+app.get('/invoice/:id',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'invoice.html'));
 });
 
 // Receipt Page
-app.get('/receipt/:id', authenticate(['admin', 'accountant', 'student']), (req, res) => {
+app.get('/receipt/:id',  (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'receipt.html'));
 });
 
 // Dashboard Routes
-app.get('/dashboard', authenticate(['admin', 'teacher', 'student', 'accountant', 'secretary']), (req, res) => {
+app.get('/dashboard',  (req, res) => {
   // Redirect based on role
   if (req.user.role === 'admin') {
     res.redirect('/admin');
@@ -8919,6 +9473,18 @@ app.get('*', (req, res) => {
     // app.get('/accounting', (req, res) => {
     //   res.sendFile(path.join(__dirname, 'public', 'accounting.html'));
     // });
+
+// ==============================================
+// Teacher Commissions API Endpoints
+// ==============================================
+
+// GET /api/accounting/teacher-commissions - Get all teacher commissions with filters
+// ==============================================
+// Teacher Commissions API Endpoints
+// ==============================================
+
+// GET /api/accounting/teacher-commissions - Get all teacher commissions with filters
+
 
 
     app.get('/student/dashboard',  (req, res) => {
@@ -9196,24 +9762,117 @@ app.get('*', (req, res) => {
       }
     });
     // إضافة نقطة النهاية المطلوبة
-  app.get('/api/accounting/teacher-commissions/:id',  async (req, res) => {
-    try {
-      const commission = await TeacherCommission.findById(req.params.id)
-        .populate('teacher')
-        .populate('student')
-        .populate('class')
-        .populate('recordedBy');
 
-      if (!commission) {
-        return res.status(404).json({ error: 'العمولة غير موجودة' });
+    app.post('/api/payment-systems/rounds', authenticate(['admin', 'accountant']), async (req, res) => {
+      try {
+        const { 
+          studentId, 
+          classId, 
+          roundNumber, 
+          sessionCount, 
+          sessionPrice, 
+          totalAmount, 
+          startDate, 
+          endDate, 
+          notes 
+        } = req.body;
+        
+        const student = await Student.findById(studentId);
+        if (!student) {
+          return res.status(404).json({ 
+            success: false,
+            error: 'الطالب غير موجود' 
+          });
+        }
+        
+        if (classId) {
+          const classObj = await Class.findById(classId);
+          if (!classObj) {
+            return res.status(404).json({ 
+              success: false,
+              error: 'الحصة غير موجودة' 
+            });
+          }
+          
+          const isEnrolled = classObj.students.includes(studentId);
+          if (!isEnrolled) {
+            return res.status(400).json({ 
+              success: false,
+              error: 'الطالب غير مسجل في هذه الحصة' 
+            });
+          }
+        }
+        
+        // Create round payment
+        const roundPayment = new RoundPayment({
+          student: studentId,
+          class: classId || null,
+          roundNumber: roundNumber || `RND-${Date.now().toString().slice(-6)}`,
+          sessionCount,
+          sessionPrice,
+          totalAmount,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          status: 'pending',
+          recordedBy: req.user.id,
+          notes: notes,
+          sessions: []
+        });
+        
+        // Generate sessions
+        const sessions = [];
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const daysBetween = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
+        const interval = Math.floor(daysBetween / (sessionCount - 1));
+        
+        for (let i = 0; i < sessionCount; i++) {
+          const sessionDate = new Date(start);
+          sessionDate.setDate(start.getDate() + (i * interval));
+          
+          sessions.push({
+            sessionNumber: i + 1,
+            date: sessionDate,
+            status: 'pending',
+            price: sessionPrice
+          });
+        }
+        
+        roundPayment.sessions = sessions;
+        await roundPayment.save();
+        
+        // Create a payment record for the round
+        const payment = new Payment({
+          student: studentId,
+          class: classId || null,
+          amount: totalAmount,
+          month: `جولة ${roundPayment.roundNumber}`,
+          monthCode: new Date().toISOString().slice(0, 7),
+          status: 'pending',
+          recordedBy: req.user.id,
+          notes: `دفعة الجولة ${roundPayment.roundNumber} - ${notes || ''}`
+        });
+        
+        await payment.save();
+        
+        res.status(201).json({
+          success: true,
+          message: 'تم إنشاء نظام الجولات بنجاح',
+          data: {
+            roundPayment,
+            payment
+          }
+        });
+      } catch (err) {
+        console.error('Error creating round payment:', err);
+        res.status(500).json({ 
+          success: false,
+          error: err.message 
+        });
       }
-
-      res.json(commission);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
+    });
+    
+    
   // إضافة نقطة نهاية لدفع عمولة محددة
   app.post('/api/accounting/teacher-commissions/:id/pay',  async (req, res) => {
     try {
@@ -10571,107 +11230,97 @@ app.get('*', (req, res) => {
   });
 
   // نقطة نهاية لدفع عمولة حصة محددة
-  app.post('/api/accounting/teacher-commissions/pay-by-class',  async (req, res) => {
+  app.post('/api/accounting/teacher-commissions/pay-by-class', authenticate(['admin', 'accountant']), async (req, res) => {
     try {
-        const { teacherId, classId, month, paymentMethod, paymentDate, percentage } = req.body;
-        
-        // البحث عن العمولات المعلقة للأستاذ والحصة والشهر المحددين
-        const commissions = await TeacherCommission.find({
-            teacher: teacherId,
-            class: classId,
-            month: month,
-            status: 'pending'
-        }).populate('student teacher class');
-        
-        if (commissions.length === 0) {
-            return res.status(404).json({ error: 'لا توجد عمولات معلقة لهذا الأستاذ في هذه الحصة لهذا الشهر' });
-        }
-        
-        let totalAmount = 0;
-        const paidCommissions = [];
-        
-        // دفع كل عمولة على حدة مع تطبيق النسبة المحددة
-        for (const commission of commissions) {
-            // إعادة حساب مبلغ العمولة بناءً على النسبة الجديدة إذا تم تغييرها
-            const originalPayment = await Payment.findOne({
-                student: commission.student._id,
-                class: commission.class._id,
-                month: commission.month
-            });
-            
-            let commissionAmount = commission.amount;
-            if (percentage && percentage != commission.percentage) {
-                // إعادة حساب العمولة بناءً على النسبة الجديدة
-                commissionAmount = originalPayment.amount * (percentage / 100);
-                commission.amount = commissionAmount;
-                commission.percentage = percentage;
-            }
-            
-            totalAmount += commissionAmount;
-            
-            // تحديث حالة العمولة إلى مدفوعة
-            commission.status = 'paid';
-            commission.paymentDate = paymentDate || new Date();
-            commission.paymentMethod = paymentMethod || 'cash';
-            commission.recordedBy = req.user.id;
-            await commission.save();
-            
-            // تسجيل المعاملة المالية (مصروف)
-            const expense = new Expense({
-                description: `عمولة الأستاذ ${commission.teacher.name} عن الطالب ${commission.student.name} لحصة ${commission.class.name} لشهر ${commission.month}`,
-                amount: commissionAmount,
-                category: 'salary',
-                type: 'teacher_payment',
-                recipient: {
-                    type: 'teacher',
-                    id: commission.teacher._id,
-                    name: commission.teacher.name
-                },
-                paymentMethod: paymentMethod || 'cash',
-                status: 'paid',
-                recordedBy: req.user.id
-            });
-            await expense.save();
-            
-            paidCommissions.push({
-                student: commission.student.name,
-                amount: commissionAmount,
-                originalAmount: originalPayment.amount
-            });
-        }
-        
-        res.json({
-            message: `تم دفع عمولة الحصة بنجاح بقيمة ${totalAmount.toLocaleString()} د.ج`,
-            totalAmount,
-            month: month,
-            paidCommissions,
-            count: commissions.length
+      const { teacherId, classId, month, paymentMethod, paymentDate, percentage } = req.body;
+      
+      // البحث عن العمولات المعلقة للأستاذ والحصة والشهر المحددين
+      const commissions = await TeacherCommission.find({
+        teacher: teacherId,
+        class: classId,
+        month: month,
+        status: 'pending'
+      }).populate('student teacher class');
+      
+      if (commissions.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'لا توجد عمولات معلقة لهذا الأستاذ في هذه الحصة لهذا الشهر' 
         });
+      }
+      
+      let totalAmount = 0;
+      const paidCommissions = [];
+      
+      // دفع كل عمولة على حدة مع تطبيق النسبة المحددة
+      for (const commission of commissions) {
+        // إعادة حساب مبلغ العمولة بناءً على النسبة الجديدة إذا تم تغييرها
+        const originalPayment = await Payment.findOne({
+          student: commission.student._id,
+          class: commission.class._id,
+          month: commission.month
+        });
+        
+        let commissionAmount = commission.amount;
+        if (percentage && percentage != commission.percentage) {
+          // إعادة حساب العمولة بناءً على النسبة الجديدة
+          commissionAmount = originalPayment.amount * (percentage / 100);
+          commission.amount = commissionAmount;
+          commission.percentage = percentage;
+        }
+        
+        totalAmount += commissionAmount;
+        
+        // تحديث حالة العمولة إلى مدفوعة
+        commission.status = 'paid';
+        commission.paymentDate = paymentDate || new Date();
+        commission.paymentMethod = paymentMethod || 'cash';
+        commission.recordedBy = req.user.id;
+        await commission.save();
+        
+        // تسجيل المعاملة المالية (مصروف)
+        const expense = new Expense({
+          description: `عمولة الأستاذ ${commission.teacher.name} عن الطالب ${commission.student.name} لحصة ${commission.class.name} لشهر ${commission.month}`,
+          amount: commissionAmount,
+          category: 'salary',
+          type: 'teacher_payment',
+          recipient: {
+            type: 'teacher',
+            id: commission.teacher._id,
+            name: commission.teacher.name
+          },
+          paymentMethod: paymentMethod || 'cash',
+          status: 'paid',
+          recordedBy: req.user.id
+        });
+        await expense.save();
+        
+        paidCommissions.push({
+          student: commission.student.name,
+          amount: commissionAmount,
+          originalAmount: originalPayment.amount
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: `تم دفع عمولة الحصة بنجاح بقيمة ${totalAmount.toLocaleString()} د.ج`,
+        totalAmount,
+        month: month,
+        paidCommissions,
+        count: commissions.length
+      });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+      console.error('Error paying by class:', err);
+      res.status(500).json({ 
+        success: false,
+        error: err.message 
+      });
     }
   });
-    app.get('/api/accounting/teacher-commissions', async (req, res) => {
-      try {
-        const { teacher, month, status } = req.query;
-        const query = {};
+  
+  
 
-        if (teacher) query.teacher = teacher;
-        if (month) query.month = month;
-        if (status) query.status = status;
-
-        const commissions = await TeacherCommission.find(query)
-          .populate('teacher')
-          .populate('student')
-          .populate('class')
-          .populate('recordedBy')
-          .sort({ month: -1 });
-
-        res.json(commissions);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    });
     app.get('/api/accounting/reports/financial',  async (req, res) => {
       try {
         const { startDate, endDate, type } = req.query;
@@ -12598,7 +13247,7 @@ app.get('*', (req, res) => {
 
   // Get student classes
   // Get student classes - ADD THIS ENDPOINT
-  app.get('/api/students/:id/classes', authenticate(['admin', 'teacher', 'secretary']), async (req, res) => {
+  app.get('/api/students/:id/classes',  async (req, res) => {
     try {
       const studentId = req.params.id;
       
@@ -12718,6 +13367,7 @@ app.get('*', (req, res) => {
       });
     }
   });
+  
   // Get payments for a specific class
   app.get('/api/payments/class/:classId', async (req, res) => {
     try {
@@ -12795,33 +13445,7 @@ app.get('*', (req, res) => {
   });
 
   // Get students in class
-  app.get('/api/classes/:id/students', async (req, res) => {
-    try {
-      const classId = req.params.id;
-      
-      console.log('Fetching students for class:', classId);
-      
-      const classObj = await Class.findById(classId).populate('students');
-      
-      if (!classObj) {
-        return res.status(404).json({ 
-          success: false,
-          error: 'الحصة غير موجودة' 
-        });
-      }
-      
-      res.json({
-        success: true,
-        data: classObj.students || []
-      });
-    } catch (err) {
-      console.error('Error fetching class students:', err);
-      res.status(500).json({ 
-        success: false,
-        error: err.message 
-      });
-    }
-  });
+
 
   // Get payments for class
   app.get('/api/payments/class/:classId', async (req, res) => {
